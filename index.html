@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RWAFund — Real World Asset Index</title>
+  <link rel="icon" type="image/svg+xml" href="public/favicon.svg" />
+  <link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@3.2.0/tabler-icons.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="src/styles.css" />
+</head>
+<body>
+  <div class="app" id="app">
+
+    <!-- Top Navigation -->
+    <nav class="topbar">
+      <div class="topbar-inner container">
+        <div class="logo">
+          <div class="logo-mark">
+            <svg viewBox="0 0 20 20" fill="white" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M10 2L2 6v8l8 4 8-4V6L10 2zm0 2.4L16 8l-6 3-6-3 6-3.6zM3.5 9.2l5.7 2.85v5.4L3.5 14.6V9.2zm7.3 2.85L16.5 9.2v5.4l-5.7 2.85v-5.4z"/>
+            </svg>
+          </div>
+          <span class="logo-name">RWAFund</span>
+          <span class="chain-badge" id="chainBadge">
+            <span class="chain-dot"></span>
+            <span id="chainLabel">Disconnected</span>
+          </span>
+        </div>
+
+        <div class="nav-links">
+          <a href="#indices" class="nav-link active">Indices</a>
+          <a href="#portfolio" class="nav-link">Portfolio</a>
+          <a href="https://testnet.iopn.tech" target="_blank" rel="noopener" class="nav-link">
+            Explorer <i class="ti ti-external-link" aria-hidden="true"></i>
+          </a>
+        </div>
+
+        <div class="topbar-actions">
+          <button class="network-btn" id="networkBtn" onclick="addIOPnNetwork()">
+            <img src="public/iopn-logo.svg" width="16" height="16" alt="IOPn" onerror="this.style.display='none'" />
+            OPN Testnet
+          </button>
+          <button class="wallet-btn" id="walletBtn" onclick="handleWalletConnect()">
+            <span class="wallet-dot" id="walletDot"></span>
+            <span id="walletText">Connect Wallet</span>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Live Ticker -->
+    <div class="ticker-strip" aria-label="Live index prices">
+      <div class="ticker-inner" id="tickerInner">
+        <div class="tick"><span class="tick-label">TSY-IDX</span><span class="tick-val mono" id="t0">$1.0412</span><span class="tick-chg up mono" id="tc0">+0.18%</span></div>
+        <div class="tick"><span class="tick-label">REFI-IDX</span><span class="tick-val mono" id="t1">$0.9871</span><span class="tick-chg down mono" id="tc1">−0.42%</span></div>
+        <div class="tick"><span class="tick-label">CMDTY-IDX</span><span class="tick-val mono" id="t2">$1.1204</span><span class="tick-chg up mono" id="tc2">+1.13%</span></div>
+        <div class="tick"><span class="tick-label">EMC-IDX</span><span class="tick-val mono" id="t3">$0.9543</span><span class="tick-chg down mono" id="tc3">−0.07%</span></div>
+        <div class="tick tick-sep"><span class="tick-label">TVL</span><span class="tick-val mono">$124.7M</span></div>
+        <div class="tick"><span class="tick-label">24H Vol</span><span class="tick-val mono">$8.3M</span></div>
+        <div class="tick"><span class="tick-label">Chain</span><span class="tick-val mono up">OPN #984</span></div>
+        <div class="tick"><span class="tick-label">Block</span><span class="tick-val mono" id="blockNum">—</span></div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="container main" id="indices">
+
+      <!-- Section: Select Index -->
+      <div class="section-header">
+        <span class="section-eyebrow">Indices</span>
+        <h1 class="section-title">Choose your basket</h1>
+        <p class="section-sub">Each index token represents a diversified basket of on-chain real-world assets, rebalanced monthly.</p>
+      </div>
+
+      <div class="indices-grid" id="indexGrid" role="list">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Portfolio Metrics -->
+      <div class="metrics-row" id="portfolio" aria-label="Portfolio summary">
+        <div class="metric-card">
+          <div class="mc-label">Portfolio value</div>
+          <div class="mc-val mono" id="portfolioVal">$0.00</div>
+          <div class="mc-sub" id="portfolioSub">No positions yet</div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-label">Est. annual yield</div>
+          <div class="mc-val mono up" id="estYield">4.8%</div>
+          <div class="mc-sub">Weighted avg APY</div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-label">Positions</div>
+          <div class="mc-val mono" id="posCount">0</div>
+          <div class="mc-sub">Index tokens held</div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-label">OPN Balance</div>
+          <div class="mc-val mono" id="opnBalance">—</div>
+          <div class="mc-sub">Gas token</div>
+        </div>
+      </div>
+
+      <!-- Detail + Buy -->
+      <div class="detail-grid">
+
+        <!-- Composition Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title" id="compositionTitle">Select an index to view composition</span>
+            <a id="explorerLink" href="https://testnet.iopn.tech" target="_blank" rel="noopener" class="panel-link">
+              View on IOPn <i class="ti ti-external-link" aria-hidden="true"></i>
+            </a>
+          </div>
+          <div class="chart-outer">
+            <canvas id="compositionChart" role="img" aria-label="Basket composition donut chart"></canvas>
+            <div class="chart-legend" id="chartLegend"></div>
+          </div>
+          <table class="holdings-table" id="holdingsTable" aria-label="Basket holdings">
+            <thead>
+              <tr>
+                <th>Asset</th>
+                <th>Issuer</th>
+                <th>Weight</th>
+                <th>Yield</th>
+                <th>NAV</th>
+              </tr>
+            </thead>
+            <tbody id="holdingsTbody">
+              <tr><td colspan="5" class="empty-row">Select an index above to see holdings</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Buy Panel -->
+        <div class="panel buy-panel-wrap">
+          <div class="panel-header">
+            <span class="panel-title">Buy index tokens</span>
+            <span class="panel-tag" id="selectedTag">—</span>
+          </div>
+
+          <div class="buy-form">
+            <div class="form-group">
+              <label class="form-label" for="buyAmount">Amount (USDC)</label>
+              <div class="input-wrap">
+                <span class="input-prefix">$</span>
+                <input type="number" id="buyAmount" class="amount-input mono" value="100" min="1" step="1" oninput="updateBreakdown()" aria-label="USDC amount to spend" />
+              </div>
+              <div class="quick-btns" role="group" aria-label="Quick amounts">
+                <button onclick="setAmt(100)">$100</button>
+                <button onclick="setAmt(500)">$500</button>
+                <button onclick="setAmt(1000)">$1k</button>
+                <button onclick="setAmt(5000)">$5k</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Max slippage</label>
+              <div class="slip-btns" id="slipBtns" role="group" aria-label="Slippage tolerance">
+                <button class="active" onclick="setSlip(0, this)">0.1%</button>
+                <button onclick="setSlip(1, this)">0.3%</button>
+                <button onclick="setSlip(2, this)">0.5%</button>
+              </div>
+            </div>
+
+            <div class="breakdown-box" id="breakdownBox">
+              <div class="brow">
+                <span>You pay</span>
+                <span class="mono" id="bPay">$100.00</span>
+              </div>
+              <div class="brow">
+                <span>Protocol fee (0.1%)</span>
+                <span class="mono" id="bFee">−$0.10</span>
+              </div>
+              <div class="brow">
+                <span>Gas estimate</span>
+                <span class="mono">~$0.04 (7 Gwei)</span>
+              </div>
+              <div class="brow brow-total">
+                <span>You receive</span>
+                <span class="mono up" id="bReceive">96.04 TSY-IDX</span>
+              </div>
+            </div>
+
+            <button class="buy-btn" id="buyBtn" onclick="handleBuy()" disabled>
+              Connect wallet to buy
+            </button>
+
+            <div class="chain-info-box">
+              <div class="ci-row">
+                <i class="ti ti-topology-star-3" aria-hidden="true"></i>
+                <span>OPN Chain Testnet</span>
+                <span class="mono">Chain ID: 984</span>
+              </div>
+              <div class="ci-row">
+                <i class="ti ti-gas-station" aria-hidden="true"></i>
+                <span>Fixed gas price</span>
+                <span class="mono">7 Gwei</span>
+              </div>
+              <div class="ci-row">
+                <i class="ti ti-clock" aria-hidden="true"></i>
+                <span>Avg block time</span>
+                <span class="mono">~1 second</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="section-header" style="margin-top: 3rem;">
+        <span class="section-eyebrow">On-chain</span>
+        <h2 class="section-title" style="font-size: 1.25rem;">Recent activity</h2>
+      </div>
+      <div class="panel">
+        <div class="tx-list" id="txList" role="list" aria-label="Recent transactions">
+          <div class="tx-row" role="listitem">
+            <div class="tx-icon" style="--c: var(--teal)" aria-hidden="true"><i class="ti ti-arrow-down-right"></i></div>
+            <div class="tx-info"><div class="tx-name">Bought TSY-IDX <span class="tag tag-tsy">Treasury</span></div><div class="tx-time">2 min ago · 0x3fa...c12</div></div>
+            <div class="tx-amt" style="color: var(--teal)">+240.6 tokens</div>
+          </div>
+          <div class="tx-row" role="listitem">
+            <div class="tx-icon" style="--c: var(--amber)" aria-hidden="true"><i class="ti ti-arrow-down-right"></i></div>
+            <div class="tx-info"><div class="tx-name">Bought REFI-IDX <span class="tag tag-re">Real Estate</span></div><div class="tx-time">14 min ago · 0x8bc...a41</div></div>
+            <div class="tx-amt" style="color: var(--amber)">+507.1 tokens</div>
+          </div>
+          <div class="tx-row" role="listitem">
+            <div class="tx-icon" style="--c: var(--coral)" aria-hidden="true"><i class="ti ti-arrow-up-right"></i></div>
+            <div class="tx-info"><div class="tx-name">Redeemed CMDTY-IDX <span class="tag tag-com">Commodity</span></div><div class="tx-time">1 hr ago · 0x1d9...f88</div></div>
+            <div class="tx-amt" style="color: var(--coral)">−200.0 tokens</div>
+          </div>
+          <div class="tx-row" role="listitem">
+            <div class="tx-icon" style="--c: var(--purple)" aria-hidden="true"><i class="ti ti-arrow-down-right"></i></div>
+            <div class="tx-info"><div class="tx-name">Bought EMC-IDX <span class="tag tag-em">EM Credit</span></div><div class="tx-time">3 hr ago · 0x77a...3c5</div></div>
+            <div class="tx-amt" style="color: var(--purple)">+1,047.2 tokens</div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container footer-inner">
+        <div class="footer-brand">
+          <span class="logo-name">RWAFund</span>
+          <span class="footer-sub">Powered by IOPn OPN Chain · Chain ID 984</span>
+        </div>
+        <div class="footer-links">
+          <a href="https://testnet.iopn.tech" target="_blank" rel="noopener">IOPn Explorer</a>
+          <a href="https://iopn.gitbook.io/iopn/developer-docs" target="_blank" rel="noopener">Docs</a>
+          <a href="https://t.me/iopndiscussion" target="_blank" rel="noopener">Community</a>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  </div>
+
+  <!-- Chart.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <!-- App scripts -->
+  <script src="src/chain.js"></script>
+  <script src="src/data.js"></script>
+  <script src="src/app.js"></script>
+</body>
+</html>
