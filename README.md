@@ -82,7 +82,7 @@ Or add manually:
 
 ### 3. Get test OPN tokens
 
-Visit the IOPn faucet (coming soon) or join the [IOPn community](https://t.me/iopndiscussion).
+Visit the IOPn faucet (https://faucet.iopn.tech/) or join the [IOPn community](https://t.me/iopndiscussion).
 
 ---
 
