@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+contracts/node_modules/
+
+# Environment
+.env
+contracts/.env
+
+# Hardhat
+contracts/cache/
+contracts/artifacts/
+contracts/typechain/
+contracts/typechain-types/
+
+# Foundry
+out/
+cache_forge/
+
+# Coverage
+coverage/
+coverage.json
+
+# Deployment artifacts
+contracts/deployed-addresses.json
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log*

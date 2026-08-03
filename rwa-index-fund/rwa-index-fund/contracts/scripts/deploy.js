@@ -7,12 +7,11 @@
 // After deployment, paste the addresses into src/data.js
 // contractAddress fields for each index.
 
-require("dotenv").config();
 const { ethers } = require("hardhat");
 
-// OPN Testnet USDC address (can be set in .env)
-const USDC_ADDRESS = process.env.USDC_ADDRESS || "0x0000000000000000000000000000000000000000";
-const FEE_RECIPIENT = process.env.FEE_RECIPIENT || "0x0000000000000000000000000000000000000000";
+// OPN Testnet USDC placeholder address (update with real deployed USDC)
+const USDC_ADDRESS = "0x0000000000000000000000000000000000000000"; // TODO
+const FEE_RECIPIENT = "0x0000000000000000000000000000000000000000"; // TODO: your address
 
 // Initial NAVs scaled to 1e18
 const toNav = (navFloat) =>

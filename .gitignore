@@ -8,6 +8,8 @@ yarn-error.log*
 artifacts/
 cache/
 build/
+deployed-addresses.json
+node.log
 
 # Coverage
 coverage/

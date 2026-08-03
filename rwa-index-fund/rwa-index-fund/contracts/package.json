@@ -1,0 +1,21 @@
+{
+  "name": "rwa-index-fund-contracts",
+  "version": "1.0.0",
+  "description": "RWAFund smart contracts for IOPn OPN Chain",
+  "scripts": {
+    "compile":    "hardhat compile",
+    "test":       "hardhat test",
+    "deploy":     "hardhat run scripts/deploy.js --network opnTestnet",
+    "deploy:local": "hardhat run scripts/deploy.js --network hardhat",
+    "verify":     "hardhat verify --network opnTestnet",
+    "node":       "hardhat node"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.0",
+    "dotenv": "^16.4.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.0"
+  }
+}

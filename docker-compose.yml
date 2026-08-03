@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  hardhat:
+    build: .
+    volumes:
+      - ./:/usr/src/app
+    env_file:
+      - .env
+    ports:
+      - "8545:8545"
+    tty: true
