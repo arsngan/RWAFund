@@ -1,83 +1,113 @@
-// scripts/deploy.js
-// Deploy all four RWA Index Token contracts to IOPn OPN Testnet
+// deploy.js
 //
-// Usage:
-//   npx hardhat run scripts/deploy.js --network opnTestnet
+// Deploys the full RWAFund testnet stack to IOPn OPN Chain:
+//   1. MockUSDC          (deposit token used by the vault)
+//   2. 4x IndexToken      (TSY-IDX, REFI-IDX, CMDTY-IDX, EMC-IDX)
+//   3. RWAVault           (points at MockUSDC, becomes each token's vault)
+//   4. Registers each basket in the vault with a starting NAV
+//   5. Writes all deployed addresses to deployed-addresses.json for the frontend
 //
-// After deployment, paste the addresses into src/data.js
-// contractAddress fields for each index.
+// Run with:
+//   npx hardhat run deploy.js --network opnTestnet
 
-const { ethers } = require("hardhat");
+const hre = require("hardhat");
+const fs = require("fs");
+const path = require("path");
 
-// OPN Testnet USDC placeholder address (update with real deployed USDC)
-const USDC_ADDRESS = "0x0000000000000000000000000000000000000000"; // TODO
-const FEE_RECIPIENT = "0x0000000000000000000000000000000000000000"; // TODO: your address
-
-// Initial NAVs scaled to 1e18
-const toNav = (navFloat) =>
-  ethers.parseUnits(navFloat.toFixed(18), 18);
-
-const INDICES = [
-  { name: "Treasury Index",     symbol: "TSY-IDX",   nav: 1.0412 },
-  { name: "Real Estate Index",  symbol: "REFI-IDX",  nav: 0.9871 },
-  { name: "Commodity Index",    symbol: "CMDTY-IDX", nav: 1.1204 },
-  { name: "EM Credit Index",    symbol: "EMC-IDX",   nav: 0.9543 },
+// Basket config: symbol, display name, starting NAV per share (scaled 1e18 = $1.00)
+const BASKETS = [
+  { symbol: "TSY-IDX", name: "RWAFund Treasury Index", startingNav: hre.ethers.parseUnits("1", 18) },
+  { symbol: "REFI-IDX", name: "RWAFund Real Estate Index", startingNav: hre.ethers.parseUnits("1", 18) },
+  { symbol: "CMDTY-IDX", name: "RWAFund Commodity Index", startingNav: hre.ethers.parseUnits("1", 18) },
+  { symbol: "EMC-IDX", name: "RWAFund Emerging Market Credit Index", startingNav: hre.ethers.parseUnits("1", 18) },
 ];
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
-  console.log("\n📦 Deploying RWAFund contracts");
-  console.log("   Network:   OPN Testnet (Chain 984)");
-  console.log("   Deployer:", deployer.address);
-  console.log("   Balance: ", ethers.formatEther(
-    await ethers.provider.getBalance(deployer.address)
-  ), "OPN\n");
+  const [deployer] = await hre.ethers.getSigners();
+  console.log("Deploying with account:", deployer.address);
 
-  const IndexToken = await ethers.getContractFactory("IndexToken");
-  const deployed = {};
-
-  for (const idx of INDICES) {
-    console.log(`🔨 Deploying ${idx.symbol}...`);
-    const contract = await IndexToken.deploy(
-      idx.name,
-      idx.symbol,
-      USDC_ADDRESS,
-      toNav(idx.nav),
-      FEE_RECIPIENT,
-      {
-        gasPrice: ethers.parseUnits("7", "gwei"), // IOPn fixed gas
-      }
-    );
-    await contract.waitForDeployment();
-    const addr = await contract.getAddress();
-    deployed[idx.symbol] = addr;
-    console.log(`   ✓ ${idx.symbol} deployed at: ${addr}`);
-    console.log(`     Explorer: https://testnet.iopn.tech/address/${addr}\n`);
+  const balance = await hre.ethers.provider.getBalance(deployer.address);
+  console.log("Deployer OPN balance:", hre.ethers.formatEther(balance));
+  if (balance === 0n) {
+    throw new Error("Deployer has 0 OPN — fund it from the IOPn testnet faucet first.");
   }
 
-  console.log("\n✅ All contracts deployed!\n");
-  console.log("📋 Update src/data.js with these addresses:\n");
-  for (const [symbol, addr] of Object.entries(deployed)) {
-    console.log(`   ${symbol}: "${addr}"`);
+  const gasPrice = hre.ethers.parseUnits("7", "gwei"); // fixed OPN testnet gas price
+
+  // ---------------------------------------------------------------
+  // 1. Deploy MockUSDC (deposit token)
+  // ---------------------------------------------------------------
+  console.log("\nDeploying MockUSDC...");
+  const MockUSDC = await hre.ethers.getContractFactory("MockUSDC");
+  const mockUSDC = await MockUSDC.deploy({ gasPrice });
+  await mockUSDC.waitForDeployment();
+  const mockUSDCAddress = await mockUSDC.getAddress();
+  console.log("MockUSDC deployed at:", mockUSDCAddress);
+
+  // ---------------------------------------------------------------
+  // 2. Deploy RWAVault (needs depositToken address; navUpdater = deployer for now)
+  // ---------------------------------------------------------------
+  console.log("\nDeploying RWAVault...");
+  const RWAVault = await hre.ethers.getContractFactory("RWAVault");
+  const vault = await RWAVault.deploy(mockUSDCAddress, deployer.address, { gasPrice });
+  await vault.waitForDeployment();
+  const vaultAddress = await vault.getAddress();
+  console.log("RWAVault deployed at:", vaultAddress);
+
+  // ---------------------------------------------------------------
+  // 3. Deploy each IndexToken, point it at the vault, register the basket
+  // ---------------------------------------------------------------
+  const deployedTokens = {};
+
+  for (const basket of BASKETS) {
+    console.log(`\nDeploying IndexToken for ${basket.symbol}...`);
+    const IndexToken = await hre.ethers.getContractFactory("IndexToken");
+    const token = await IndexToken.deploy(basket.name, basket.symbol, { gasPrice });
+    await token.waitForDeployment();
+    const tokenAddress = await token.getAddress();
+    console.log(`${basket.symbol} deployed at:`, tokenAddress);
+
+    // Grant the vault mint/burn rights on this token
+    console.log(`Setting vault on ${basket.symbol}...`);
+    const setVaultTx = await token.setVault(vaultAddress, { gasPrice });
+    await setVaultTx.wait();
+
+    // Register this basket in the vault with its starting NAV
+    const basketId = hre.ethers.keccak256(hre.ethers.toUtf8Bytes(basket.symbol));
+    console.log(`Registering ${basket.symbol} in vault...`);
+    const registerTx = await vault.registerBasket(basketId, tokenAddress, basket.startingNav, { gasPrice });
+    await registerTx.wait();
+
+    deployedTokens[basket.symbol] = {
+      address: tokenAddress,
+      basketId,
+      startingNav: basket.startingNav.toString(),
+    };
   }
 
-  // Save addresses to a file for reference
-  const fs = require("fs");
-  const out = {
-    network: "OPN Testnet",
-    chainId: 984,
-    deployedAt: new Date().toISOString(),
+  // ---------------------------------------------------------------
+  // 4. Write all addresses out for the frontend (data.js)
+  // ---------------------------------------------------------------
+  const output = {
+    network: hre.network.name,
+    chainId: hre.network.config.chainId,
     deployer: deployer.address,
-    contracts: deployed,
+    mockUSDC: mockUSDCAddress,
+    rwaVault: vaultAddress,
+    indexTokens: deployedTokens,
+    deployedAt: new Date().toISOString(),
   };
-  fs.writeFileSync(
-    "deployed-addresses.json",
-    JSON.stringify(out, null, 2)
-  );
-  console.log("\n💾 Saved to deployed-addresses.json");
+
+  const outPath = path.join(__dirname, "deployed-addresses.json");
+  fs.writeFileSync(outPath, JSON.stringify(output, null, 2));
+
+  console.log("\n=== Deployment complete ===");
+  console.log(JSON.stringify(output, null, 2));
+  console.log(`\nAddresses written to ${outPath}`);
+  console.log("Copy these into src/data.js to connect the frontend.");
 }
 
-main().catch((err) => {
-  console.error(err);
+main().catch((error) => {
+  console.error(error);
   process.exitCode = 1;
 });
